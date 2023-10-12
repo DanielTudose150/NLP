@@ -42,7 +42,6 @@ print(words)
 print('-------------------')
 print(syns.lemma_names('eng'))
 
-
 # check if it's an adjective. if so, antomyms and synonyms are clear
 # if(len(wn.synsets(tematica, wn.ADJ)) !=0):
 #     #print(syns.antonyms())
@@ -62,7 +61,7 @@ def definitia(cuvant):
     if (cuvant in definition):
         stg = definition.find(cuvant)
         definition2 = definition[0:stg - 1] + definition[stg + len(cuvant):]
-        print(definition2)
+        #print(definition2)
         return (definition2)
     else:
         if (len(definition) == 0):
@@ -73,6 +72,7 @@ def definitia(cuvant):
 
 
 def exemplul(cuvant):
+    syns =  wn.synsets(cuvant)[0]
     if (len(syns.examples())) != 0:
         example = syns.examples()[0]
         if (cuvant in example):
@@ -82,7 +82,7 @@ def exemplul(cuvant):
                 for i in range(0, len(cuvant)):
                     example2 = example2 + '_'
                 example2 = example2 + ' ' + example[stg + len(cuvant):]
-                print(example2)
+                #print(example2)
                 return example2
     print('No example available')
     return " "
@@ -136,6 +136,193 @@ def antonymul(cuvant):
         # print('An antonym cannot be found')
         return " "
 
+def printGrid(grid, h):
+    for i in range(h):
+        print(grid[i])
+
+
+def createGrid(words):
+    info = {}
+    for word in words:
+        info[word] = {
+            "length": len(word),
+            "start": {
+                "row": 0,
+                "col": 0
+            },
+            "end": {
+                "row": 0,
+                "col": 0
+            },
+            "dir": -1
+        }
+
+    sortedWords = sorted(words, key=lambda x: info[x]["length"], reverse=True)
+    grid = [["+" for _ in range(100)] for _ in range(100)]
+    addedOrder = []
+
+    i = 0
+    # placing 1st word in the middle of the matrix
+    for j in range(50 - len(sortedWords[0]) // 2, 100):
+        if i == 0:
+            info[sortedWords[0]]["start"] = {"row": 50, "col": j}
+            info[sortedWords[0]]["dir"] = 1
+        if i == len(sortedWords[0]):
+            info[sortedWords[0]]["end"] = {"row": 50, "col": j - 1}
+            break
+
+        grid[50][j] = sortedWords[0][i]
+        i += 1
+    addedOrder.append(sortedWords[0])
+    # placing the other words inside
+    for i in range(1, len(sortedWords)):
+        placeable = False
+
+        curr = sortedWords[i]
+        # print("Trying to add ", curr)
+        # check if they have common character with other placed  words
+        commons = []
+        for l, w in enumerate(addedOrder):
+            commonC = []
+            for k, c in enumerate(curr):
+                if c in w:
+                    commonC.append((c, k, w.find(c)))
+            commons.append((l, commonC))
+
+        # check if placeable
+        for el in commons:
+            if placeable:
+                break
+            if info[addedOrder[el[0]]]["dir"] == 1:
+                for pair in el[1]:
+                    plOk = True
+                    for cn, row in enumerate(range(info[addedOrder[el[0]]]["start"]["row"] - pair[1],
+                                                   info[addedOrder[el[0]]]["start"]["row"] - pair[1] + info[curr][
+                                                       "length"])):
+                        if grid[row][info[addedOrder[el[0]]]["start"]["col"] + pair[2]] != "+":
+                            if cn == pair[1]:
+                                continue
+                            plOk = False
+                            break
+                    if plOk:
+                        # place word in grid
+                        for cn, row in enumerate(range(info[addedOrder[el[0]]]["start"]["row"] - pair[1],
+                                                       info[addedOrder[el[0]]]["start"]["row"] - pair[1] + info[curr][
+                                                           "length"])):
+                            grid[row][info[addedOrder[el[0]]]["start"]["col"] + pair[2]] = curr[cn]
+                        addedOrder.append(curr)
+                        info[curr]["start"] = {"row": info[addedOrder[el[0]]]["start"]["row"] - pair[1],
+                                               "col": info[addedOrder[el[0]]]["start"]["col"] + pair[2]}
+                        info[curr]["end"] = {
+                            "row": info[addedOrder[el[0]]]["start"]["row"] - pair[1] + info[curr]["length"],
+                            "col": info[addedOrder[el[0]]]["start"]["col"] + pair[2]}
+                        info[curr]["dir"] = 3 - info[addedOrder[el[0]]]["dir"]
+                        placeable = True
+                        # print("Added ", curr, " to ", addedOrder[el[0]], " ", el[0])
+                        break
+            elif info[addedOrder[el[0]]]["dir"] == 2:
+                for pair in el[1]:
+                    plOk = True
+                    for rn, col in enumerate(range(info[addedOrder[el[0]]]["start"]["col"] - pair[1],
+                                                   info[addedOrder[el[0]]]["start"]["col"] - pair[1] + info[curr][
+                                                       "length"])):
+                        if grid[info[addedOrder[el[0]]]["start"]["row"] + pair[2]][col] != "+":
+                            if rn == pair[1]:
+                                continue
+                            plOk = False
+                            break
+                    if plOk:
+                        # place word in grid
+                        for rn, col in enumerate(range(info[addedOrder[el[0]]]["start"]["col"] - pair[1],
+                                                       info[addedOrder[el[0]]]["start"]["col"] - pair[1] + info[curr][
+                                                           "length"])):
+                            grid[info[addedOrder[el[0]]]["start"]["row"] + pair[2]][col] = curr[rn]
+
+                        addedOrder.append(curr)
+                        info[curr]["start"] = {"row": info[addedOrder[el[0]]]["start"]["row"] + pair[2],
+                                               "col": info[addedOrder[el[0]]]["start"]["col"] - pair[1]}
+                        info[curr]["end"] = {"row": info[addedOrder[el[0]]]["start"]["row"] + pair[2],
+                                             "col": info[addedOrder[el[0]]]["start"]["col"] - pair[1] + info[curr][
+                                                 "length"]}
+                        info[curr]["dir"] = 3 - info[addedOrder[el[0]]]["dir"]
+                        placeable = True
+                        # print("Added ", curr, " to ", addedOrder[el[0]], " ", el[0])
+                        break
+        if placeable:
+            pass
+        else:
+            highestRow = 0
+            highestCol = 0
+            for w in addedOrder:
+                if info[w]["dir"] == 2:
+                    if info[w]["end"]["row"] > highestRow:
+                        highestRow = info[w]["end"]["row"] + 1
+                        highestCol = addedOrder[0]["start"]["col"]
+            for col, c in enumerate(curr):
+                grid[highestRow][col] = c
+
+            addedOrder.append(curr)
+            info[curr]["start"] = {"row": highestRow, "col": highestCol}
+            info[curr]["end"] = {"row": highestRow, "col": highestCol + info[curr]["length"]}
+            info[curr]["dir"] = 1
+            # print("Added ", curr, " outside of crossword puzzle.")
+
+    # printGrid(grid, 100)
+
+    # trim grid
+    lowestRow = 100
+    leftestCol = 100
+    highestRow = 0
+    rightestCol = 0
+
+    for w in addedOrder:
+        if info[w]["start"]["row"] < lowestRow:
+            lowestRow = info[w]["start"]["row"]
+        if info[w]["start"]["col"] < leftestCol:
+            leftestCol = info[w]["start"]["col"]
+        if info[w]["end"]["row"] > highestRow:
+            highestRow = info[w]["end"]["row"]
+        if info[w]["end"]["col"] > rightestCol:
+            rightestCol = info[w]["end"]["col"]
+
+    maxi = 0
+    for w in addedOrder:
+        info[w]["start"]["row"] -= (lowestRow)
+        info[w]["start"]["col"] -= (leftestCol )
+        if info[w]["dir"] == 1:
+            info[w]["end"]["row"] = info[w]["start"]["row"]
+            info[w]["end"]["col"] = info[w]["start"]["col"] + info[w]["length"]
+            if info[w]["end"]["col"] > maxi:
+                maxi = info[w]["end"]["col"]
+        elif info[w]["dir"] == 2:
+            info[w]["end"]["col"] = info[w]["start"]["col"]
+            info[w]["end"]["row"] = info[w]["start"]["row"] + info[w]["length"]
+            if info[w]["end"]["row"] > maxi:
+                maxi = info[w]["end"]["row"]
+
+    grid = [[" " for _ in range(maxi + 1)] for _ in range(maxi + 1)]
+
+    for w in addedOrder:
+        if info[w]["dir"] == 1:
+            for j, c in enumerate(range(info[w]["start"]["col"], info[w]["end"]["col"])):
+                grid[info[w]["start"]["row"]][c] = "@"
+        elif info[w]["dir"] == 2:
+            for i, r in enumerate(range(info[w]["start"]["row"], info[w]["end"]["row"])):
+                grid[r][info[w]["start"]["col"]] = "@"
+
+    printGrid(grid, maxi + 1)
+
+    return info, grid, maxi
+
+def printGrid2(info, grid, h, w):
+    if info[w]["dir"] == 1:
+        for j, c in enumerate(range(info[w]["start"]["col"], info[w]["end"]["col"])):
+            grid[info[w]["start"]["row"]][c] = w[j]
+    elif info[w]["dir"] == 2:
+        for i, r in enumerate(range(info[w]["start"]["row"], info[w]["end"]["row"])):
+            grid[r][info[w]["start"]["col"]] = w[i]
+
+    printGrid(grid, h)
 
 def wordsAndClues(words):
     for word in words:
@@ -180,230 +367,10 @@ def wordsAndClues(words):
                     raspunsUser = input("Your answer: ")
                     while word != raspunsUser:
                         raspunsUser = input("Try again. Your new answer: ")
-    print("Great answer! Moving on to the next words.")
+        print("Great answer! Have a look at the crossword puzzle now and let's move on!")
+        printGrid2(gInfo, gGrid, gMaxi, word)
 
+gInfo, gGrid, gMaxi = createGrid(words)
+print("---------------------------------")
 
-# crossword part
-dim = 0
-for word in words:
-    dim += len(word)
-
-
-def create_crossword_grid(size):
-    grid = [['^' for _ in range(size)] for _ in range(size)]
-    return grid
-
-
-def print_crossword_grid(grid):
-    for row in grid:
-        print(" ".join(row))
-
-
-def place_word_in_grid(grid, word, x, y, direction):
-    if direction == "across":
-        for i in enumerate(word):
-            grid[y][x + i] = "@"
-    elif direction == "down":
-        for i in enumerate(word):
-            grid[y + i][x] == "@"
-
-
-def main():
-    size = 10  # Adjust the size of the grid as needed
-    grid = create_crossword_grid(size)
-    word = "HELLO"
-    x, y, direction = 2, 2, "across"
-    place_word_in_grid(grid, word, x, y, direction)
-
-    print("Crossword Grid:")
-    print_crossword_grid(grid)
-
-
-# wordsAndClues(words)
-# main()
-
-def printGrid(grid, h):
-    for i in range(h):
-        print(grid[i])
-
-
-def createGrid(words):
-    info = {}
-    for word in words:
-        info[word] = {
-            "length": len(word),
-            "start": {
-                "row": 0,
-                "col": 0
-            },
-            "end": {
-                "row": 0,
-                "col": 0
-            },
-            "dir": -1
-        }
-
-    sortedWords = sorted(words, key=lambda x: info[x]["length"], reverse=True)
-    grid = [["+" for _ in range(100)] for _ in range(100)]
-    addedOrder = []
-
-    i = 0
-    # placing 1st word in the middle of the matrix
-    for j in range(50 - len(sortedWords[0]) // 2, 100):
-        if i == 0:
-            info[sortedWords[0]]["start"] = {"row": 50, "col": j}
-            info[sortedWords[0]]["dir"] = 1
-        if i == len(sortedWords[0]):
-            info[sortedWords[0]]["end"] = {"row": 50, "col": j - 1}
-            break
-
-        grid[50][j] = sortedWords[0][i]
-        i += 1
-    addedOrder.append(sortedWords[0])
-    print(words)
-    print(sortedWords)
-    # placing the other words inside
-    for i in range(1, len(sortedWords)):
-        placeable = False
-
-        curr = sortedWords[i]
-        print("Trying to add ", curr)
-        # check if they have common character with other placed  words
-        commons = []
-        for l, w in enumerate(addedOrder):
-            commonC = []
-            for k, c in enumerate(curr):
-                if c in w:
-                    commonC.append((c, k, w.find(c)))
-            commons.append((l, commonC))
-
-        # check if placeable
-        for el in commons:
-            if placeable:
-                break
-            if info[addedOrder[el[0]]]["dir"] == 1:
-                for pair in el[1]:
-                    plOk = True
-                    for cn, row in enumerate(range(info[addedOrder[el[0]]]["start"]["row"] - pair[1],
-                                                   info[addedOrder[el[0]]]["start"]["row"] - pair[1] + info[curr][
-                                                       "length"])):
-                        if grid[row][info[addedOrder[el[0]]]["start"]["col"] + pair[2]] != "+":
-                            if cn == pair[1]:
-                                continue
-                            plOk = False
-                            break
-                    if plOk:
-                        # place word in grid
-                        for cn, row in enumerate(range(info[addedOrder[el[0]]]["start"]["row"] - pair[1],
-                                                       info[addedOrder[el[0]]]["start"]["row"] - pair[1] + info[curr][
-                                                           "length"])):
-                            grid[row][info[addedOrder[el[0]]]["start"]["col"] + pair[2]] = curr[cn]
-                        addedOrder.append(curr)
-                        info[curr]["start"] = {"row": info[addedOrder[el[0]]]["start"]["row"] - pair[1],
-                                               "col": info[addedOrder[el[0]]]["start"]["col"] + pair[2]}
-                        info[curr]["end"] = {
-                            "row": info[addedOrder[el[0]]]["start"]["row"] - pair[1] + info[curr]["length"],
-                            "col": info[addedOrder[el[0]]]["start"]["col"] + pair[2]}
-                        info[curr]["dir"] = 3 - info[addedOrder[el[0]]]["dir"]
-                        placeable = True
-                        print("Added ", curr, " to ", addedOrder[el[0]], " ", el[0])
-                        break
-            elif info[addedOrder[el[0]]]["dir"] == 2:
-                for pair in el[1]:
-                    plOk = True
-                    for rn, col in enumerate(range(info[addedOrder[el[0]]]["start"]["col"] - pair[1],
-                                                   info[addedOrder[el[0]]]["start"]["col"] - pair[1] + info[curr][
-                                                       "length"])):
-                        if grid[info[addedOrder[el[0]]]["start"]["row"] + pair[2]][col] != "+":
-                            if rn == pair[1]:
-                                continue
-                            plOk = False
-                            break
-                    if plOk:
-                        # place word in grid
-                        print(pair, curr)
-                        for rn, col in enumerate(range(info[addedOrder[el[0]]]["start"]["col"] - pair[1],
-                                                       info[addedOrder[el[0]]]["start"]["col"] - pair[1] + info[curr][
-                                                           "length"])):
-                            grid[info[addedOrder[el[0]]]["start"]["row"] + pair[2]][col] = curr[rn]
-
-                        addedOrder.append(curr)
-                        info[curr]["start"] = {"row": info[addedOrder[el[0]]]["start"]["col"] + pair[2],
-                                               "col": info[addedOrder[el[0]]]["start"]["col"] - pair[1]}
-                        info[curr]["end"] = {"row": info[addedOrder[el[0]]]["start"]["col"] + pair[2],
-                                             "col": info[addedOrder[el[0]]]["start"]["col"] - pair[1] + info[curr][
-                                                 "length"]}
-                        info[curr]["dir"] = 3 - info[addedOrder[el[0]]]["dir"]
-                        placeable = True
-                        print("Added ", curr, " to ", addedOrder[el[0]], " ", el[0])
-                        break
-        if placeable:
-            pass
-        else:
-            highestRow = 0
-            highestCol = 0
-            for w in addedOrder:
-                if info[w]["dir"] == 2:
-                    if info[w]["end"]["row"] > highestRow:
-                        highestRow = info[w]["end"]["row"] + 1
-                        highestCol = addedOrder[0]["start"]["col"]
-            for col, c in enumerate(curr):
-                grid[highestRow][col] = c
-
-            addedOrder.append(curr)
-            info[curr]["start"] = {"row": highestRow, "col": highestCol}
-            info[curr]["end"] = {"row": highestRow, "col": highestCol + info[curr]["length"]}
-            info[curr]["dir"] = 1
-            print("Added ", curr, " outside of crossword puzzle.")
-
-    printGrid(grid, 100)
-
-    # trim grid
-    lowestRow = 100
-    leftestCol = 100
-    highestRow = 0
-    rightestCol = 0
-
-    for w in addedOrder:
-        if info[w]["start"]["row"] < lowestRow:
-            lowestRow = info[w]["start"]["row"]
-        if info[w]["start"]["col"] < leftestCol:
-            leftestCol = info[w]["start"]["col"]
-        if info[w]["end"]["row"] > highestRow:
-            highestRow = info[w]["end"]["row"]
-        if info[w]["end"]["col"] > rightestCol:
-            rightestCol = info[w]["end"]["col"]
-
-    for w in addedOrder:
-        print(w, info[w])
-    print("LR ", lowestRow)
-    print("LC ", leftestCol)
-    maxi = 0
-    for w in addedOrder:
-        info[w]["start"]["row"] -= (lowestRow)
-        info[w]["start"]["col"] -= (leftestCol )
-        if info[w]["dir"] == 1:
-            info[w]["end"]["row"] = info[w]["start"]["row"]
-            info[w]["end"]["col"] = info[w]["start"]["col"] + info[w]["length"]
-            if info[w]["end"]["col"] > maxi:
-                maxi = info[w]["end"]["col"]
-        elif info[w]["dir"] == 2:
-            info[w]["end"]["col"] = info[w]["start"]["col"]
-            info[w]["end"]["row"] = info[w]["start"]["row"] + info[w]["length"]
-            if info[w]["end"]["row"] > maxi:
-                maxi = info[w]["end"]["row"]
-
-    grid = [["+" for _ in range(maxi + 1)] for _ in range(maxi + 1)]
-
-    for w in addedOrder:
-        if info[w]["dir"] == 1:
-            for j, c in enumerate(range(info[w]["start"]["col"], info[w]["end"]["col"])):
-                grid[info[w]["start"]["row"]][c] = w[j]
-        elif info[w]["dir"] == 2:
-            for i, r in enumerate(range(info[w]["start"]["row"], info[w]["end"]["row"])):
-                grid[r][info[w]["start"]["col"]] = w[i]
-        print(w, info[w])
-    printGrid(grid, maxi + 1)
-
-
-createGrid(words)
+wordsAndClues(words)
