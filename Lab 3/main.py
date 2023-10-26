@@ -122,7 +122,7 @@ inputText = input('Please enter a 4 word sentence for input: ')
 inputIds = tokenizer.encode(inputText, return_tensors='pt')
 
 # generate predictions for the next 2 words
-max_length = 3
+max_length = 6
 output = model.generate(inputIds, max_length=max_length, num_return_sequences=1, no_repeat_ngram_size=2, top_k=50)
 
 # decode predicted tokens into words

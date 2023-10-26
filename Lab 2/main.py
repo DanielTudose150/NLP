@@ -123,11 +123,8 @@ if __name__ == '__main__':
     nltk.download('words', quiet=True)
     nltk.download('comparative_sentences', quiet=True)
 
-    tagged_sentences = [nltk.pos_tag(nltk.word_tokenize(sentence)) for sentence in sentences]
     preprocessed = [preprocess(s) for s in sentences]
-    # print(preprocessed)
-    # Define a more comprehensive CFG grammar
-    # Define a more comprehensive CFG grammar
+
     grammar = nltk.CFG.fromstring("""
     S -> NP VP
     VP -> V | P V | V NP | V Adj P V
